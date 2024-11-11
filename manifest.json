@@ -1,0 +1,16 @@
+{
+    "name": "Music Catalog PWA",
+    "short_name": "Music Cat",
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4A90E2",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "images/icon-72x72.png",
+            "type": "image/png",
+            "sizes": "72x72"
+        }
+    ]
+}
