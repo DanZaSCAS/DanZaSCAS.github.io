@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Timer</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --warning-color: #e74c3c;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #333333;
+            --border-radius: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .gates-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .gate-card {
+            flex: 1;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .gate-disconnected {
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+        }
+
+        .gate-connected {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+        }
+
+        .gate-status {
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+
+        .btn-danger {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .results-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 1.5rem;
+            margin: 1rem 0;
+        }
+        
+        .result-box {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .result-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+        
+        .timer-display {
+            font-size: 3.5rem;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            width: 100%;
+            padding: 1rem;
+            background-color: #f5f5f5;
+            border-radius: var(--border-radius);
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .distance-selector {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        select, input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .status-message {
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .message-success {
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .message-error {
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            color: #c62828;
+        }
+
+        .message-info {
+            background-color: #e3f2fd;
+            border: 1px solid #bbdefb;
+            color: #1565c0;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Animation for connecting state */
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .connecting {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Sprint Timer</h1>
+            <p class="subtitle">Bluetooth Timing Gate Interface</p>
+        </header>
+
+        <div class="card">
+            <h2>Gate Connection</h2>
+            <div class="gates-container">
+                <div id="start-gate" class="gate-card gate-disconnected">
+                    <h3>Start Gate</h3>
+                    <div id="start-gate-status" class="gate-status">Disconnected</div>
+                </div>
+                <div id="end-gate" class="gate-card gate-disconnected">
+                    <h3>End Gate</h3>
+                    <div id="end-gate-status" class="gate-status">Disconnected</div>
+                </div>
+            </div>
+            <div class="btn-container">
+                <button id="btn-connect-start" class="btn-success">Connect Start Gate</button>
+                <button id="btn-connect-end" class="btn-success">Connect End Gate</button>
+            </div>
+            <div id="connection-status" class="status-message"></div>
+        </div>
+
+        <div class="card">
+            <h2>Sprint Timer</h2>
+            <div class="results-container">
+                <div class="result-box">
+                    <div class="result-label">Time (seconds)</div>
+                    <div id="timer" class="timer-display">00.000</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">Speed (km/h)</div>
+                    <div id="speed" class="timer-display">0.0</div>
+                </div>
+            </div>
+            <div class="btn-container">
+                <button id="btn-reset" class="btn-danger">Reset Timer</button>
+            </div>
+            <div class="distance-selector">
+                <label for="distance-select">Distance:</label>
+                <select id="distance-select">
+                    <option value="20">20 meters</option>
+                    <option value="40">40 meters</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <input type="number" id="custom-distance" placeholder="meters" style="display: none;">
+            </div>
+            <div id="timer-status" class="status-message"></div>
+        </div>
+
+        <footer>
+            &copy; 2025 Sprint Timer | Replacement for Veld SmartSpeed/Fusion PT
+        </footer>
+    </div>
+
+    <script>
+        // DOM Elements
+        const startGateEl = document.getElementById('start-gate');
+        const endGateEl = document.getElementById('end-gate');
+        const startGateStatusEl = document.getElementById('start-gate-status');
+        const endGateStatusEl = document.getElementById('end-gate-status');
+        const btnConnectStart = document.getElementById('btn-connect-start');
+        const btnConnectEnd = document.getElementById('btn-connect-end');
+        const btnReset = document.getElementById('btn-reset');
+        const timerEl = document.getElementById('timer');
+        const speedEl = document.getElementById('speed');
+        const distanceSelect = document.getElementById('distance-select');
+        const customDistance = document.getElementById('custom-distance');
+        const connectionStatusEl = document.getElementById('connection-status');
+        const timerStatusEl = document.getElementById('timer-status');
+
+        // Global variables
+        let startGateDevice = null;
+        let endGateDevice = null;
+        let startGateCharacteristic = null;
+        let endGateCharacteristic = null;
+        let startTime = 0;
+        let timerInterval = null;
+        let isTimerRunning = false;
+
+        // Configuration - Update these based on your specific gates
+        // The SERVICE_UUID is intentionally commented out to allow all devices to appear
+        // Uncomment and modify these once you've identified your device
+        
+        // You'll need to update these UUIDs based on your specific hardware
+        const SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; 
+        const CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb';
+
+        // Initialize the application
+        function init() {
+            // Check for Web Bluetooth support
+            if (!navigator.bluetooth) {
+                showConnectionStatus('Web Bluetooth is not supported in your browser. Please use Chrome or Edge.', 'error');
+                disableButtons();
+                return;
+            }
+            
+            // Display browser information
+            showConnectionStatus('Using ' + navigator.userAgent + '. Web Bluetooth is supported.', 'info');
+
+            // Event listeners
+            btnConnectStart.addEventListener('click', connectStartGate);
+            btnConnectEnd.addEventListener('click', connectEndGate);
+            btnReset.addEventListener('click', resetTimer);
+            
+            distanceSelect.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customDistance.style.display = 'inline-block';
+                } else {
+                    customDistance.style.display = 'none';
+                }
+            });
+
+            // Log ready status
+            console.log('Sprint Timer initialized and ready');
+        }
+
+        // Connect to start gate
+        async function connectStartGate() {
+            if (startGateDevice) {
+                showConnectionStatus('Start gate already connected!', 'info');
+                return;
+            }
+
+            try {
+                showConnectionStatus('Searching for devices...', 'info');
+                btnConnectStart.disabled = true;
+                startGateStatusEl.textContent = 'Searching...';
+                startGateEl.classList.add('connecting');
+                
+                // Request a Bluetooth device - using acceptAllDevices to see everything
+                startGateDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
+                
+                showConnectionStatus('Found device: ' + startGateDevice.name, 'info');
+                startGateStatusEl.textContent = 'Connecting...';
+                
+                // Connect to the device
+                const server = await startGateDevice.gatt.connect();
+                
+                // Add debug information
+                console.log('Connected to device:', startGateDevice.name);
+                console.log('Getting available services...');
+                const services = await server.getPrimaryServices();
+                console.log('Available services:', services.map(s => s.uuid));
+                
+                try {
+                    const service = await server.getPrimaryService(SERVICE_UUID);
+                    const characteristics = await service.getCharacteristics();
+                    console.log('Available characteristics:', characteristics.map(c => c.uuid));
+                    
+                    startGateCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                } catch (error) {
+                    console.error('Error accessing service or characteristic:', error);
+                    showConnectionStatus('Service not found. Try different UUIDs. Check console for details.', 'error');
+                    
+                    // Disconnect since we couldn't set up properly
+                    if (startGateDevice && startGateDevice.gatt.connected) {
+                        startGateDevice.gatt.disconnect();
+                    }
+                    startGateDevice = null;
+                    throw error;
+                }
+                
+                // Subscribe to notifications
+                await startGateCharacteristic.startNotifications();
+                startGateCharacteristic.addEventListener('characteristicvaluechanged', handleStartGateTrigger);
+                
+                // Add disconnect event listener
+                startGateDevice.addEventListener('gattserverdisconnected', handleStartGateDisconnect);
+                
+                // Update UI
+                startGateEl.classList.remove('gate-disconnected', 'connecting');
+                startGateEl.classList.add('gate-connected');
+                startGateStatusEl.textContent = 'Connected';
+                btnConnectStart.textContent = 'Disconnect';
+                btnConnectStart.classList.remove('btn-success');
+                btnConnectStart.classList.add('btn-danger');
+                btnConnectStart.disabled = false;
+                
+                showConnectionStatus('Start gate connected successfully!', 'success');
+                
+                // Update button to disconnect on next click
+                btnConnectStart.removeEventListener('click', connectStartGate);
+                btnConnectStart.addEventListener('click', disconnectStartGate);
+                
+            } catch (error) {
+                console.error('Error connecting to start gate:', error);
+                showConnectionStatus('Error: ' + error.message, 'error');
+                
+                // Reset UI
+                startGateEl.classList.remove('connecting');
+                startGateStatusEl.textContent = 'Disconnected';
+                btnConnectStart.disabled = false;
+                startGateDevice = null;
+            }
+        }
+
+        // Disconnect start gate
+        async function disconnectStartGate() {
+            if (startGateDevice && startGateDevice.gatt.connected) {
+                try {
+                    // Unsubscribe from notifications
+                    if (startGateCharacteristic) {
+                        await startGateCharacteristic.stopNotifications();
+                    }
+                    
+                    // Disconnect
+                    startGateDevice.gatt.disconnect();
+                    
+                    showConnectionStatus('Start gate disconnected', 'info');
+                } catch (error) {
+                    console.error('Error disconnecting:', error);
+                    showConnectionStatus('Error disconnecting: ' + error.message, 'error');
+                }
+            }
+            
+            // Reset state even if there was an error
+            startGateDevice = null;
+            startGateCharacteristic = null;
+            
+            // Update UI
+            startGateEl.classList.remove('gate-connected');
+            startGateEl.classList.add('gate-disconnected');
+            startGateStatusEl.textContent = 'Disconnected';
+            btnConnectStart.textContent = 'Connect Start Gate';
+            btnConnectStart.classList.remove('btn-danger');
+            btnConnectStart.classList.add('btn-success');
+            
+            // Update button to connect on next click
+            btnConnectStart.removeEventListener('click', disconnectStartGate);
+            btnConnectStart.addEventListener('click', connectStartGate);
+        }
+
+        // Handle start gate disconnection
+        function handleStartGateDisconnect() {
+            console.log('Start gate disconnected');
+            disconnectStartGate();
+        }
+
+        // Connect to end gate
+        async function connectEndGate() {
+            if (endGateDevice) {
+                showConnectionStatus('End gate already connected!', 'info');
+                return;
+            }
+
+            try {
+                showConnectionStatus('Searching for devices...', 'info');
+                btnConnectEnd.disabled = true;
+                endGateStatusEl.textContent = 'Searching...';
+                endGateEl.classList.add('connecting');
+                
+                // Request a Bluetooth device - using acceptAllDevices to see everything
+                endGateDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [SERVICE_UUID]
+                });
+                
+                showConnectionStatus('Found device: ' + endGateDevice.name, 'info');
+                endGateStatusEl.textContent = 'Connecting...';
+                
+                // Connect to the device
+                const server = await endGateDevice.gatt.connect();
+                
+                // Add debug information
+                console.log('Connected to device:', endGateDevice.name);
+                console.log('Getting available services...');
+                const services = await server.getPrimaryServices();
+                console.log('Available services:', services.map(s => s.uuid));
+                
+                try {
+                    const service = await server.getPrimaryService(SERVICE_UUID);
+                    const characteristics = await service.getCharacteristics();
+                    console.log('Available characteristics:', characteristics.map(c => c.uuid));
+                    
+                    endGateCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+                } catch (error) {
+                    console.error('Error accessing service or characteristic:', error);
+                    showConnectionStatus('Service not found. Try different UUIDs. Check console for details.', 'error');
+                    
+                    // Disconnect since we couldn't set up properly
+                    if (endGateDevice && endGateDevice.gatt.connected) {
+                        endGateDevice.gatt.disconnect();
+                    }
+                    endGateDevice = null;
+                    throw error;
+                }
+                
+                // Subscribe to notifications
+                await endGateCharacteristic.startNotifications();
+                endGateCharacteristic.addEventListener('characteristicvaluechanged', handleEndGateTrigger);
+                
+                // Add disconnect event listener
+                endGateDevice.addEventListener('gattserverdisconnected', handleEndGateDisconnect);
+                
+                // Update UI
+                endGateEl.classList.remove('gate-disconnected', 'connecting');
+                endGateEl.classList.add('gate-connected');
+                endGateStatusEl.textContent = 'Connected';
+                btnConnectEnd.textContent = 'Disconnect';
+                btnConnectEnd.classList.remove('btn-success');
+                btnConnectEnd.classList.add('btn-danger');
+                btnConnectEnd.disabled = false;
+                
+                showConnectionStatus('End gate connected successfully!', 'success');
+                
+                // Update button to disconnect on next click
+                btnConnectEnd.removeEventListener('click', connectEndGate);
+                btnConnectEnd.addEventListener('click', disconnectEndGate);
+                
+            } catch (error) {
+                console.error('Error connecting to end gate:', error);
+                showConnectionStatus('Error: ' + error.message, 'error');
+                
+                // Reset UI
+                endGateEl.classList.remove('connecting');
+                endGateStatusEl.textContent = 'Disconnected';
+                btnConnectEnd.disabled = false;
+                endGateDevice = null;
+            }
+        }
+
+        // Disconnect end gate
+        async function disconnectEndGate() {
+            if (endGateDevice && endGateDevice.gatt.connected) {
+                try {
+                    // Unsubscribe from notifications
+                    if (endGateCharacteristic) {
+                        await endGateCharacteristic.stopNotifications();
+                    }
+                    
+                    // Disconnect
+                    endGateDevice.gatt.disconnect();
+                    
+                    showConnectionStatus('End gate disconnected', 'info');
+                } catch (error) {
+                    console.error('Error disconnecting:', error);
+                    showConnectionStatus('Error disconnecting: ' + error.message, 'error');
+                }
+            }
+            
+            // Reset state even if there was an error
+            endGateDevice = null;
+            endGateCharacteristic = null;
+            
+            // Update UI
+            endGateEl.classList.remove('gate-connected');
+            endGateEl.classList.add('gate-disconnected');
+            endGateStatusEl.textContent = 'Disconnected';
+            btnConnectEnd.textContent = 'Connect End Gate';
+            btnConnectEnd.classList.remove('btn-danger');
+            btnConnectEnd.classList.add('btn-success');
+            
+            // Update button to connect on next click
+            btnConnectEnd.removeEventListener('click', disconnectEndGate);
+            btnConnectEnd.addEventListener('click', connectEndGate);
+        }
+
+        // Handle end gate disconnection
+        function handleEndGateDisconnect() {
+            console.log('End gate disconnected');
+            disconnectEndGate();
+        }
+
+        // Handle start gate trigger event
+        function handleStartGateTrigger(event) {
+            console.log('Start gate triggered', event.target.value);
+            
+            // Extract data from the notification (format will depend on your specific gates)
+            const value = event.target.value;
+            
+            // Log the data received for debugging
+            const bytes = new Uint8Array(value.buffer);
+            console.log('Received data:', Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+            
+            // Start the timer if not already running
+            if (!isTimerRunning) {
+                startTime = Date.now();
+                isTimerRunning = true;
+                
+                // Reset speed display
+                speedEl.textContent = '0.0';
+                
+                // Update timer display
+                timerInterval = setInterval(() => {
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    timerEl.textContent = elapsed.toFixed(3);
+                }, 10);
+                
+                showTimerStatus('Timer started!', 'success');
+                
+                // Visual indication
+                timerEl.style.color = 'var(--primary-color)';
+                speedEl.style.color = 'var(--text-color)';
+            }
+        }
+
+        // Handle end gate trigger event
+        function handleEndGateTrigger(event) {
+            console.log('End gate triggered', event.target.value);
+            
+            // Extract data from the notification (format will depend on your specific gates)
+            const value = event.target.value;
+            
+            // Log the data received for debugging
+            const bytes = new Uint8Array(value.buffer);
+            console.log('Received data:', Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+            
+            // Stop the timer if running
+            if (isTimerRunning) {
+                const endTime = Date.now();
+                const elapsedTime = (endTime - startTime) / 1000;
+                
+                // Stop updating the display
+                clearInterval(timerInterval);
+                isTimerRunning = false;
+                
+                // Update the final time
+                timerEl.textContent = elapsedTime.toFixed(3);
+                
+                // Get the distance
+                let distance;
+                if (distanceSelect.value === 'custom') {
+                    distance = parseFloat(customDistance.value) || 0;
+                } else {
+                    distance = parseInt(distanceSelect.value);
+                }
+                
+                // Calculate speed in m/s and km/h
+                const speedMps = distance / elapsedTime;
+                const speedKmh = speedMps * 3.6; // Convert m/s to km/h
+                
+                // Update speed display
+                speedEl.textContent = speedKmh.toFixed(1);
+                
+                // Show result
+                showTimerStatus(`Finish! Time: ${elapsedTime.toFixed(3)}s | Speed: ${speedKmh.toFixed(1)} km/h`, 'success');
+                
+                // Visual indication
+                timerEl.style.color = 'var(--secondary-color)';
+                speedEl.style.color = 'var(--secondary-color)';
+            }
+        }
+
+        // Reset the timer
+        function resetTimer() {
+            // Clear any running timer
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            
+            // Reset the displays
+            timerEl.textContent = '00.000';
+            speedEl.textContent = '0.0';
+            timerEl.style.color = 'var(--text-color)';
+            speedEl.style.color = 'var(--text-color)';
+            
+            showTimerStatus('Timer reset', 'info');
+        }
+
+        // Show connection status message
+        function showConnectionStatus(message, type = 'info') {
+            connectionStatusEl.textContent = message;
+            connectionStatusEl.className = 'status-message';
+            
+            switch (type) {
+                case 'success':
+                    connectionStatusEl.classList.add('message-success');
+                    break;
+                case 'error':
+                    connectionStatusEl.classList.add('message-error');
+                    break;
+                case 'info':
+                default:
+                    connectionStatusEl.classList.add('message-info');
+                    break;
+            }
+            
+            // Auto-hide after 5 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    connectionStatusEl.style.opacity = '0';
+                    setTimeout(() => {
+                        connectionStatusEl.textContent = '';
+                        connectionStatusEl.style.opacity = '1';
+                    }, 500);
+                }, 5000);
+            }
+        }
+
+        // Show timer status message
+        function showTimerStatus(message, type = 'info') {
+            timerStatusEl.textContent = message;
+            timerStatusEl.className = 'status-message';
+            
+            switch (type) {
+                case 'success':
+                    timerStatusEl.classList.add('message-success');
+                    break;
+                case 'error':
+                    timerStatusEl.classList.add('message-error');
+                    break;
+                case 'info':
+                default:
+                    timerStatusEl.classList.add('message-info');
+                    break;
+            }
+        }
+
+        // Disable all buttons
+        function disableButtons() {
+            btnConnectStart.disabled = true;
+            btnConnectEnd.disabled = true;
+            btnReset.disabled = true;
+        }
+
+        // Initialize the app when the page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
