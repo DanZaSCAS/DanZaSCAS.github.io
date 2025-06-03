@@ -1,0 +1,221 @@
+"""
+HSC Software Engineering - Simple Logistic Regression
+===================================================
+
+Beginner-friendly logistic regression using OOP.
+Logistic regression predicts CATEGORIES (not numbers) like Yes/No, Pass/Fail.
+
+Real example: Instagram detecting inappropriate content (Appropriate/Inappropriate).
+"""
+
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+
+
+class SimpleLogisticRegression:
+    """
+    Simple logistic regression class for HSC students.
+    
+    What it does: Predicts categories (Yes/No, Pass/Fail, etc.)
+    Why: Many real-world problems need classification, not number prediction.
+    
+    Key difference: Outputs probabilities (0.0 to 1.0) then converts to categories.
+    """
+    
+    def __init__(self):
+        """Set up the model - ready to learn categories from data."""
+        self.model = LogisticRegression()
+        self.is_trained = False
+        self.categories = None
+        print("Logistic regression model created - ready for classification training!")
+    
+    def train(self, x_data, y_categories):
+        """
+        Train the model with labeled data (supervised learning).
+        
+        x_data: input values (like image features)
+        y_categories: correct categories (like "appropriate" or "inappropriate")
+        """
+        # Convert to numpy array for consistent handling
+        X = np.array(x_data).reshape(-1, 1)
+        y = np.array(y_categories)
+        
+        # Store unique categories
+        self.categories = list(set(y_categories))
+        
+        # Learn the pattern from the training data
+        self.model.fit(X, y)
+        self.is_trained = True
+        
+        print(f"Training complete! Learned to classify into: {self.categories}")
+        print(f"Trained on {len(x_data)} examples.")
+    
+    def predict(self, new_x):
+        """
+        Predict category for new input.
+        
+        new_x: new input to classify
+        Returns: predicted category AND probability
+        """
+        if not self.is_trained:
+            print("Error: Must train the model first!")
+            return None, None
+        
+        # Convert input to proper format
+        new_X = np.array(new_x).reshape(-1, 1)
+        
+        # Get prediction and probability
+        prediction = self.model.predict(new_X)[0]
+        probability = self.model.predict_proba(new_X)[0].max()
+        
+        return prediction, probability
+    
+    def explain_prediction(self, new_x):
+        """
+        Explain how the model made its prediction.
+        Shows the probability and decision process.
+        """
+        if not self.is_trained:
+            print("Error: Must train the model first!")
+            return
+        
+        new_X = np.array(new_x).reshape(-1, 1)
+        
+        # Get probabilities for all categories
+        probabilities = self.model.predict_proba(new_X)[0]
+        prediction = self.model.predict(new_X)[0]
+        
+        print(f"\nPrediction for input {new_x}:")
+        for i, category in enumerate(self.model.classes_):
+            prob_percent = probabilities[i] * 100
+            marker = " ← CHOSEN" if category == prediction else ""
+            print(f"  {category}: {prob_percent:.1f}% chance{marker}")
+        
+        print(f"\nFinal decision: {prediction}")
+        return prediction
+
+
+# Instagram Content Moderation Example
+def instagram_content_example():
+    """Real-world example: Instagram detecting inappropriate content."""
+    
+    print("=== INSTAGRAM CONTENT MODERATION EXAMPLE ===")
+    print("Problem: Automatically detect inappropriate photos")
+    print("Categories: 'appropriate' or 'inappropriate'")
+    print("Features: Skin tone percentage in image\n")
+    
+    # Training data (simplified - real Instagram uses thousands of features)
+    skin_percentages = [5, 10, 15, 25, 35, 45, 55, 65, 75, 85]  # % of image showing skin
+    content_labels = [
+        'appropriate', 'appropriate', 'appropriate', 'appropriate', 'appropriate',
+        'inappropriate', 'inappropriate', 'inappropriate', 'inappropriate', 'inappropriate'
+    ]
+    
+    print("Training Data (Supervised Learning):")
+    for skin, label in zip(skin_percentages, content_labels):
+        print(f"  {skin}% skin → {label}")
+    
+    # Create and train model
+    model = SimpleLogisticRegression()
+    model.train(skin_percentages, content_labels)
+    
+    # Test on new images
+    print("\n=== TESTING ON NEW IMAGES ===")
+    test_images = [20, 40, 60, 80]  # New skin percentages to classify
+    
+    for skin_percent in test_images:
+        category, confidence = model.predict([skin_percent])
+        print(f"\nImage with {skin_percent}% skin:")
+        print(f"  Prediction: {category}")
+        print(f"  Confidence: {confidence:.1%}")
+        
+        # Show detailed explanation
+        model.explain_prediction([skin_percent])
+
+
+# Email Spam Detection Example
+def email_spam_example():
+    """Example: Email spam detection based on number of exclamation marks."""
+    
+    print("\n=== EMAIL SPAM DETECTION EXAMPLE ===")
+    print("Problem: Classify emails as 'spam' or 'legitimate'")
+    print("Feature: Number of exclamation marks in email\n")
+    
+    # Training data
+    exclamation_counts = [0, 1, 1, 2, 2, 3, 5, 7, 8, 10, 12, 15]  # Number of ! marks
+    email_types = [
+        'legitimate', 'legitimate', 'legitimate', 'legitimate', 'legitimate', 'legitimate',
+        'spam', 'spam', 'spam', 'spam', 'spam', 'spam'
+    ]
+    
+    print("Training Data:")
+    for count, email_type in zip(exclamation_counts, email_types):
+        print(f"  {count} exclamation marks → {email_type}")
+    
+    # Train model
+    model = SimpleLogisticRegression()
+    model.train(exclamation_counts, email_types)
+    
+    # Test predictions
+    print("\n=== CLASSIFYING NEW EMAILS ===")
+    test_emails = [1, 4, 6, 9]  # New emails with different ! counts
+    
+    for count in test_emails:
+        email_type, confidence = model.predict([count])
+        print(f"\nEmail with {count} exclamation marks:")
+        print(f"  Classification: {email_type}")
+        print(f"  Confidence: {confidence:.1%}")
+
+
+# Student Pass/Fail Prediction
+def student_grade_example():
+    """Example: Predicting if students pass or fail based on study hours."""
+    
+    print("\n=== STUDENT PASS/FAIL PREDICTION ===")
+    print("Problem: Predict if student will pass or fail")
+    print("Feature: Hours studied per week\n")
+    
+    # Training data
+    study_hours = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20]  # Hours per week
+    outcomes = [
+        'fail', 'fail', 'fail', 'pass', 'pass', 
+        'pass', 'pass', 'pass', 'pass', 'pass'
+    ]
+    
+    print("Training Data:")
+    for hours, outcome in zip(study_hours, outcomes):
+        print(f"  {hours} hours/week → {outcome}")
+    
+    # Train model
+    model = SimpleLogisticRegression()
+    model.train(study_hours, outcomes)
+    
+    # Predict for new students
+    print("\n=== PREDICTING FOR NEW STUDENTS ===")
+    new_students = [5, 9, 13, 17]  # Study hours for new students
+    
+    for hours in new_students:
+        result, confidence = model.predict([hours])
+        print(f"\nStudent studying {hours} hours/week:")
+        print(f"  Prediction: {result}")
+        print(f"  Confidence: {confidence:.1%}")
+        
+        # Show detailed breakdown
+        model.explain_prediction([hours])
+
+
+# Run all examples
+if __name__ == "__main__":
+    instagram_content_example()
+    email_spam_example()
+    student_grade_example()
+    
+    print("\n" + "=" * 60)
+    print("KEY LEARNING POINTS FOR HSC:")
+    print("1. Logistic regression predicts CATEGORIES (not numbers)")
+    print("2. Outputs probabilities (0.0 to 1.0) then picks category")
+    print("3. Uses supervised learning (needs labeled training data)")
+    print("4. Perfect for Yes/No, Pass/Fail, Spam/Legitimate decisions")
+    print("5. Despite name 'regression', it's actually CLASSIFICATION")
+    print("6. Real applications: content moderation, fraud detection")
+    print("=" * 60)

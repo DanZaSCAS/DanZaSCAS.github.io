@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Regression Interactive Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #343a40;
+        }
+        .plot-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .plot-img {
+            max-width: 100%;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+        .data-point {
+            cursor: pointer;
+            stroke-width: 2;
+            stroke: #212529;
+        }
+        .canvas-container {
+            position: relative;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        #plotCanvas {
+            width: 100%;
+            height: 400px;
+        }
+        .metrics-panel {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        .nav-tabs .nav-link {
+            color: #495057;
+        }
+        .nav-tabs .nav-link.active {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+        }
+        .form-range::-webkit-slider-thumb {
+            background: #0d6efd;
+        }
+        .explanation {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        .dataset-card {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .dataset-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Interactive Regression Explorer</h1>
+        
+        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="playground-tab" data-bs-toggle="tab" data-bs-target="#playground" type="button" role="tab" aria-controls="playground" aria-selected="true">Data Playground</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="datasets-tab" data-bs-toggle="tab" data-bs-target="#datasets" type="button" role="tab" aria-controls="datasets" aria-selected="false">Dataset Explorer</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="comparison-tab" data-bs-toggle="tab" data-bs-target="#comparison" type="button" role="tab" aria-controls="comparison" aria-selected="false">Regression Comparison</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="prediction-tab" data-bs-toggle="tab" data-bs-target="#prediction" type="button" role="tab" aria-controls="prediction" aria-selected="false">Prediction Simulator</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="explanation-tab" data-bs-toggle="tab" data-bs-target="#explanation" type="button" role="tab" aria-controls="explanation" aria-selected="false">Concepts</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="myTabContent">
+            <!-- Data Playground Tab -->
+            <div class="tab-pane fade show active" id="playground" role="tabpanel" aria-labelledby="playground-tab">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="canvas-container">
+                            <canvas id="plotCanvas"></canvas>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <button id="clearPoints" class="btn btn-outline-secondary">Clear Points</button>
+                            <button id="calculateRegression" class="btn btn-primary">Calculate Regression</button>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="showResiduals">
+                            <label class="form-check-label" for="showResiduals">Show Residuals</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Manual Adjustment</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="slopeSlider" class="form-label">Slope: <span id="slopeValue">1.0</span></label>
+                                    <input type="range" class="form-range" id="slopeSlider" min="-5" max="5" step="0.1" value="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="interceptSlider" class="form-label">Intercept: <span id="interceptValue">0.0</span></label>
+                                    <input type="range" class="form-range" id="interceptSlider" min="-10" max="10" step="0.1" value="0">
+                                </div>
+                                <button id="applyManual" class="btn btn-success w-100">Apply</button>
+                            </div>
+                        </div>
+                        
+                        <div class="metrics-panel mt-3">
+                            <h5>Regression Metrics</h5>
+                            <div id="regressionEquation" class="mb-2">y = mx + b</div>
+                            <div id="correlationCoefficient" class="mb-2">Correlation (r): -</div>
+                            <div id="mseValue" class="mb-2">Mean Squared Error: -</div>
+                            <div id="r2Value">R² Score: -</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dataset Explorer Tab -->
+            <div class="tab-pane fade" id="datasets" role="tabpanel" aria-labelledby="datasets-tab">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h3>Choose a Dataset</h3>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="card dataset-card" data-dataset="housing">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Housing Prices</h5>
+                                        <p class="card-text">House size vs. price data</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card dataset-card" data-dataset="scores">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Student Scores</h5>
+                                        <p class="card-text">Study hours vs. test scores</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card dataset-card" data-dataset="salary">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Experience & Salary</h5>
+                                        <p class="card-text">Years of experience vs. salary</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label for="csvUpload" class="form-label">Or upload your own CSV:</label>
+                            <input class="form-control" type="file" id="csvUpload" accept=".csv">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="plot-container">
+                            <img id="datasetPlot" class="plot-img" src="" alt="Dataset visualization" style="display: none;">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="metrics-panel">
+                            <h5>Dataset Information</h5>
+                            <div id="datasetName" class="mb-2">Name: -</div>
+                            <div id="datasetSize" class="mb-2">Size: -</div>
+                            <div id="datasetCorrelation" class="mb-2">Correlation: -</div>
+                            <div id="datasetEquation" class="mb-2">Equation: -</div>
+                            <div id="datasetDescription" class="mt-3">
+                                Select a dataset to see its description and regression analysis.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Regression Comparison Tab -->
+            <div class="tab-pane fade" id="comparison" role="tabpanel" aria-labelledby="comparison-tab">
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="plot-container">
+                            <img id="comparisonPlot" class="plot-img" src="" alt="Regression comparison" style="display: none;">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Polynomial Degree</h5>
+                            </div>
+                            <div class="card-body">
+                                <label for="polynomialDegree" class="form-label">Degree: <span id="degreeValue">2</span></label>
+                                <input type="range" class="form-range" id="polynomialDegree" min="1" max="5" step="1" value="2">
+                                <button id="updateComparison" class="btn btn-primary w-100 mt-3">Update Comparison</button>
+                            </div>
+                        </div>
+                        
+                        <div class="metrics-panel mt-3">
+                            <h5>Comparison Metrics</h5>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Model</th>
+                                        <th>MSE</th>
+                                        <th>R²</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Linear</td>
+                                        <td id="linearMSE">-</td>
+                                        <td id="linearR2">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Polynomial</td>
+                                        <td id="polyMSE">-</td>
+                                        <td id="polyR2">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="alert alert-info mt-3">
+                                <strong>When to use:</strong>
+                                <ul>
+                                    <li><strong>Linear:</strong> When data follows a straight line pattern</li>
+                                    <li><strong>Polynomial:</strong> When data follows a curved pattern</li>
+                                    <li><strong>Logistic:</strong> For binary classification problems (0/1 outcomes)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Prediction Simulator Tab -->
+            <div class="tab-pane fade" id="prediction" role="tabpanel" aria-labelledby="prediction-tab">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Make a Prediction</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="xValueInput" class="form-label">Enter X value:</label>
+                                    <input type="number" class="form-control" id="xValueInput" step="0.1">
+                                </div>
+                                <button id="predictButton" class="btn btn-primary">Predict Y Value</button>
+                                
+                                <div class="mt-4">
+                                    <h6>Prediction Result:</h6>
+                                    <div id="predictionResult" class="alert alert-secondary">
+                                        Enter an X value and click Predict to see the result.
+                                    </div>
+                                </div>
+                                
+                                <div class="form-check mt-3">
+                                    <input class="form-check-input" type="checkbox" id="showConfidence">
+                                    <label class="form-check-label" for="showConfidence">
+                                        Show confidence interval (95%)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="plot-container">
+                            <img id="predictionPlot" class="plot-img" src="" alt="Prediction visualization" style="display: none;">
+                        </div>
+                        <div class="metrics-panel mt-3">
+                            <h5>Error Metrics Explained</h5>
+                            <dl>
+                                <dt>Mean Squared Error (MSE)</dt>
+                                <dd>Average of squared differences between predicted and actual values. Lower is better.</dd>
+                                
+                                <dt>Root Mean Squared Error (RMSE)</dt>
+                                <dd>Square root of MSE, in the same units as the target variable.</dd>
+                                
+                                <dt>R² Score (Coefficient of Determination)</dt>
+                                <dd>Proportion of variance explained by the model. Ranges from 0 to 1, higher is better.</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Explanation Tab -->
+            <div class="tab-pane fade" id="explanation" role="tabpanel" aria-labelledby="explanation-tab">
+                <div class="row">
+                    <div class="col-md-12">
+                        <h3>Understanding Regression Algorithms</h3>
+                        
+                        <div class="explanation">
+                            <h4>Linear Regression</h4>
+                            <p>Linear regression is a statistical method that models the relationship between a dependent variable (y) and one or more independent variables (x) using a linear equation:</p>
+                            <p class="text-center"><strong>y = mx + b</strong></p>
+                            <p>Where:</p>
+                            <ul>
+                                <li><strong>y</strong> is the dependent variable (what we're trying to predict)</li>
+                                <li><strong>x</strong> is the independent variable (our input data)</li>
+                                <li><strong>m</strong> is the slope (how much y changes when x changes)</li>
+                                <li><strong>b</strong> is the y-intercept (the value of y when x = 0)</li>
+                            </ul>
+                            <p>The algorithm finds the values of m and b that minimize the sum of squared differences between predicted and actual y values.</p>
+                        </div>
+                        
+                        <div class="explanation mt-4">
+                            <h4>Polynomial Regression</h4>
+                            <p>Polynomial regression extends linear regression by adding polynomial terms to the equation:</p>
+                            <p class="text-center"><strong>y = a₀ + a₁x + a₂x² + a₃x³ + ... + aₙxⁿ</strong></p>
+                            <p>This allows the model to capture non-linear relationships in the data. The degree of the polynomial (n) determines how complex the curve can be:</p>
+                            <ul>
+                                <li>Degree 1: Same as linear regression (straight line)</li>
+                                <li>Degree 2: Parabola (one curve)</li>
+                                <li>Degree 3: Cubic function (can have multiple curves)</li>
+                                <li>Higher degrees: More complex curves</li>
+                            </ul>
+                            <p>Higher degree polynomials can fit training data better but may overfit, performing poorly on new data.</p>
+                        </div>
+                        
+                        <div class="explanation mt-4">
+                            <h4>Logistic Regression</h4>
+                            <p>Despite its name, logistic regression is used for classification problems, not regression. It predicts the probability of an outcome being in a particular category:</p>
+                            <p class="text-center"><strong>P(y=1) = 1 / (1 + e^-(mx + b))</strong></p>
+                            <p>The logistic function transforms the linear equation into a value between 0 and 1, which can be interpreted as a probability. If the probability is above a threshold (usually 0.5), the outcome is classified as 1, otherwise as 0.</p>
+                            <p>Logistic regression is commonly used for binary classification problems like:</p>
+                            <ul>
+                                <li>Email spam detection (spam or not spam)</li>
+                                <li>Disease diagnosis (positive or negative)</li>
+                                <li>Customer churn prediction (will leave or stay)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="explanation mt-4">
+                            <h4>Connecting to Neural Networks</h4>
+                            <p>Linear regression can be seen as the simplest form of a neural network - a single neuron with a linear activation function. More complex neural networks build on this foundation by:</p>
+                            <ul>
+                                <li>Adding multiple neurons (nodes) in layers</li>
+                                <li>Using non-linear activation functions</li>
+                                <li>Connecting layers in complex ways</li>
+                            </ul>
+                            <p>The training process for both regression models and neural networks involves finding the optimal weights (parameters) that minimize the difference between predicted and actual values.</p>
+                        </div>
+                        
+                        <div class="explanation mt-4">
+                            <h4>MLOps and Regression Models</h4>
+                            <p>In a production environment, regression models go through the MLOps lifecycle:</p>
+                            <ol>
+                                <li><strong>Design:</strong> Defining the problem and success metrics</li>
+                                <li><strong>Model Development:</strong> Data preparation, feature engineering, model training and validation</li>
+                                <li><strong>Operations:</strong> Deployment, monitoring, and maintenance</li>
+                            </ol>
+                            <p>This interactive tool demonstrates the model development phase, where you can experiment with different regression algorithms and see how they perform on various datasets.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sample datasets
+        const datasets = {
+            housing: {
+                x: [50, 75, 100, 125, 150, 175, 200, 225, 250, 275],
+                y: [150000, 200000, 250000, 300000, 350000, 425000, 500000, 550000, 600000, 675000],
+                xLabel: 'House Size (sq m)',
+                yLabel: 'Price ($)',
+                description: 'This dataset shows the relationship between house size and price. There is a strong positive correlation, indicating that larger houses tend to be more expensive.'
+            },
+            scores: {
+                x: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                y: [50, 55, 65, 60, 70, 75, 75, 80, 85, 90],
+                xLabel: 'Study Hours per Week',
+                yLabel: 'Test Score (%)',
+                description: 'This dataset shows the relationship between weekly study hours and test scores. There is a positive correlation, suggesting that more study time generally leads to better test performance.'
+            },
+            salary: {
+                x: [0, 1, 2, 3, 5, 7, 10, 12, 15, 20],
+                y: [40000, 45000, 50000, 60000, 65000, 70000, 80000, 90000, 100000, 120000],
+                xLabel: 'Years of Experience',
+                yLabel: 'Annual Salary ($)',
+                description: 'This dataset shows the relationship between years of professional experience and annual salary. The positive correlation indicates that salary tends to increase with experience.'
+            }
+        };
+
+        // Canvas setup for Data Playground
+        const canvas = document.getElementById('plotCanvas');
+        const ctx = canvas.getContext('2d');
+        let points = [];
+        let regressionLine = null;
+        let showResiduals = false;
+
+        // Set canvas dimensions
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawPlot();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Draw axes and points
+        function drawPlot() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw axes
+            const padding = 40;
+            const plotWidth = canvas.width - 2 * padding;
+            const plotHeight = canvas.height - 2 * padding;
+            
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.strokeStyle = '#000';
+            ctx.stroke();
+            
+            // Draw axis labels
+            ctx.fillStyle = '#000';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('X', canvas.width - padding, canvas.height - padding + 20);
+            ctx.save();
+            ctx.translate(padding - 20, canvas.height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Y', 0, 0);
+            ctx.restore();
+            
+            // Draw points
+            points.forEach(point => {
+                const x = padding + (point.x / 10) * plotWidth;
+                const y = canvas.height - padding - (point.y / 10) * plotHeight;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, Math.PI * 2);
+                ctx.fillStyle = 'blue';
+                ctx.fill();
+            });
+            
+            // Draw regression line if available
+            if (regressionLine) {
+                const { slope, intercept } = regressionLine;
+                
+                // Calculate line endpoints
+                const x1 = 0;
+                const y1 = intercept;
+                const x2 = 10;
+                const y2 = slope * 10 + intercept;
+                
+                const canvasX1 = padding + (x1 / 10) * plotWidth;
+                const canvasY1 = canvas.height - padding - (y1 / 10) * plotHeight;
+                const canvasX2 = padding + (x2 / 10) * plotWidth;
+                const canvasY2 = canvas.height - padding - (y2 / 10) * plotHeight;
+                
+                ctx.beginPath();
+                ctx.moveTo(canvasX1, canvasY1);
+                ctx.lineTo(canvasX2, canvasY2);
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.lineWidth = 1;
+                
+                // Draw residuals if enabled
+                if (showResiduals) {
+                    points.forEach(point => {
+                        const x = padding + (point.x / 10) * plotWidth;
+                        const predictedY = slope * point.x + intercept;
+                        const predictedCanvasY = canvas.height - padding - (predictedY / 10) * plotHeight;
+                        const actualCanvasY = canvas.height - padding - (point.y / 10) * plotHeight;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(x, actualCanvasY);
+                        ctx.lineTo(x, predictedCanvasY);
+                        ctx.strokeStyle = 'green';
+                        ctx.setLineDash([3, 3]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    });
+                }
+            }
+        }
+
+        // Add point on canvas click
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            const padding = 40;
+            const plotWidth = canvas.width - 2 * padding;
+            const plotHeight = canvas.height - 2 * padding;
+            
+            // Convert canvas coordinates to data coordinates
+            const dataX = ((x - padding) / plotWidth) * 10;
+            const dataY = ((canvas.height - padding - y) / plotHeight) * 10;
+            
+            // Add point if within plot area
+            if (dataX >= 0 && dataX <= 10 && dataY >= 0 && dataY <= 10) {
+                points.push({ x: dataX, y: dataY });
+                drawPlot();
+                updateMetrics();
+            }
+        });
+
+        // Clear points button
+        document.getElementById('clearPoints').addEventListener('click', () => {
+            points = [];
+            regressionLine = null;
+            drawPlot();
+            updateMetrics();
+        });
+
+        // Calculate regression button
+        document.getElementById('calculateRegression').addEventListener('click', () => {
+            if (points.length < 2) {
+                alert('Please add at least 2 points to calculate regression.');
+                return;
+            }
+            
+            calculateLinearRegression();
+            drawPlot();
+            updateMetrics();
+        });
+
+        // Show residuals toggle
+        document.getElementById('showResiduals').addEventListener('change', (event) => {
+            showResiduals = event.target.checked;
+            drawPlot();
+        });
+
+        // Manual adjustment sliders
+        const slopeSlider = document.getElementById('slopeSlider');
+        const interceptSlider = document.getElementById('interceptSlider');
+        const slopeValue = document.getElementById('slopeValue');
+        const interceptValue = document.getElementById('interceptValue');
+        
+        slopeSlider.addEventListener('input', () => {
+            slopeValue.textContent = slopeSlider.value;
+        });
+        
+        interceptSlider.addEventListener('input', () => {
+            interceptValue.textContent = interceptSlider.value;
+        });
+        
+        document.getElementById('applyManual').addEventListener('click', () => {
+            regressionLine = {
+                slope: parseFloat(slopeSlider.value),
+                intercept: parseFloat(interceptSlider.value)
+            };
+            drawPlot();
+            updateMetrics();
+        });
+
+        // Calculate linear regression
+        function calculateLinearRegression() {
+            if (points.length < 2) return null;
+            
+            // Calculate means
+            const n = points.length;
+            const meanX = points.reduce((sum, point) => sum + point.x, 0) / n;
+            const meanY = points.reduce((sum, point) => sum + point.y, 0) / n;
+            
+            // Calculate slope and intercept
+            let numerator = 0;
+            let denominator = 0;
+            
+            points.forEach(point => {
+                numerator += (point.x - meanX) * (point.y - meanY);
+                denominator += (point.x - meanX) ** 2;
+            });
+            
+            const slope = denominator !== 0 ? numerator / denominator : 0;
+            const intercept = meanY - slope * meanX;
+            
+            regressionLine = { slope, intercept };
+            return regressionLine;
+        }
+
+        // Update metrics display
+        function updateMetrics() {
+            const regressionEquation = document.getElementById('regressionEquation');
+            const correlationCoefficient = document.getElementById('correlationCoefficient');
+            const mseValue = document.getElementById('mseValue');
+            const r2Value = document.getElementById('r2Value');
+            
+            if (regressionLine && points.length >= 2) {
+                const { slope, intercept } = regressionLine;
+                
+                // Format equation
+                const interceptSign = intercept >= 0 ? '+' : '';
+                regressionEquation.textContent = `y = ${slope.toFixed(2)}x ${interceptSign} ${intercept.toFixed(2)}`;
+                
+                // Calculate correlation coefficient
+                const n = points.length;
+                const meanX = points.reduce((sum, point) => sum + point.x, 0) / n;
+                const meanY = points.reduce((sum, point) => sum + point.y, 0) / n;
+                
+                let numerator = 0;
+                let denominatorX = 0;
+                let denominatorY = 0;
+                
+                points.forEach(point => {
+                    numerator += (point.x - meanX) * (point.y - meanY);
+                    denominatorX += (point.x - meanX) ** 2;
+                    denominatorY += (point.y - meanY) ** 2;
+                });
+                
+                const r = Math.sqrt(denominatorX * denominatorY) !== 0 ? 
+                    numerator / Math.sqrt(denominatorX * denominatorY) : 0;
+                
+                correlationCoefficient.textContent = `Correlation (r): ${r.toFixed(4)}`;
+                
+                // Calculate MSE and R²
+                let sse = 0; // Sum of squared errors
+                let sst = 0; // Total sum of squares
+                
+                points.forEach(point => {
+                    const predicted = slope * point.x + intercept;
+                    sse += (point.y - predicted) ** 2;
+                    sst += (point.y - meanY) ** 2;
+                });
+                
+                const mse = sse / n;
+                const r2 = sst !== 0 ? 1 - (sse / sst) : 0;
+                
+                mseValue.textContent = `Mean Squared Error: ${mse.toFixed(4)}`;
+                r2Value.textContent = `R² Score: ${r2.toFixed(4)}`;
+            } else {
+                regressionEquation.textContent = 'y = mx + b';
+                correlationCoefficient.textContent = 'Correlation (r): -';
+                mseValue.textContent = 'Mean Squared Error: -';
+                r2Value.textContent = 'R² Score: -';
+            }
+        }
+
+        // Dataset Explorer tab functionality
+        const datasetCards = document.querySelectorAll('.dataset-card');
+        
+        datasetCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const datasetName = card.getAttribute('data-dataset');
+                const dataset = datasets[datasetName];
+                
+                // Update dataset information
+                document.getElementById('datasetName').textContent = `Name: ${datasetName.charAt(0).toUpperCase() + datasetName.slice(1)}`;
+                document.getElementById('datasetSize').textContent = `Size: ${dataset.x.length} data points`;
+                document.getElementById('datasetDescription').textContent = dataset.description;
+                
+                // Calculate correlation and regression
+                const n = dataset.x.length;
+                const meanX = dataset.x.reduce((sum, x) => sum + x, 0) / n;
+                const meanY = dataset.y.reduce((sum, y) => sum + y, 0) / n;
+                
+                let numerator = 0;
+                let denominatorX = 0;
+                let denominatorY = 0;
+                
+                for (let i = 0; i < n; i++) {
+                    numerator += (dataset.x[i] - meanX) * (dataset.y[i] - meanY);
+                    denominatorX += (dataset.x[i] - meanX) ** 2;
+                    denominatorY += (dataset.y[i] - meanY) ** 2;
+                }
+                
+                const r = numerator / Math.sqrt(denominatorX * denominatorY);
+                document.getElementById('datasetCorrelation').textContent = `Correlation: ${r.toFixed(4)}`;
+                
+                // Calculate regression
+                const slope = numerator / denominatorX;
+                const intercept = meanY - slope * meanX;
+                
+                const interceptSign = intercept >= 0 ? '+' : '';
+                document.getElementById('datasetEquation').textContent = `Equation: y = ${slope.toFixed(2)}x ${interceptSign} ${intercept.toFixed(2)}`;
+                
+                // Simulate API call for plot (in a real implementation, this would call the backend)
+                simulateApiCall('linear_regression', {
+                    x: dataset.x,
+                    y: dataset.y
+                }, 'datasetPlot');
+            });
+        });
+
+        // CSV upload functionality
+        document.getElementById('csvUpload').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const contents = e.target.result;
+                    const lines = contents.split('\n');
+                    
+                    const x = [];
+                    const y = [];
+                    
+                    // Skip header if present
+                    const startLine = lines[0].includes(',') && isNaN(parseFloat(lines[0].split(',')[0])) ? 1 : 0;
+                    
+                    for (let i = startLine; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (line) {
+                            const values = line.split(',');
+                            if (values.length >= 2) {
+                                const xVal = parseFloat(values[0]);
+                                const yVal = parseFloat(values[1]);
+                                if (!isNaN(xVal) && !isNaN(yVal)) {
+                                    x.push(xVal);
+                                    y.push(yVal);
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (x.length > 0) {
+                        // Update dataset information
+                        document.getElementById('datasetName').textContent = `Name: ${file.name}`;
+                        document.getElementById('datasetSize').textContent = `Size: ${x.length} data points`;
+                        document.getElementById('datasetDescription').textContent = `Custom dataset uploaded from ${file.name}`;
+                        
+                        // Calculate correlation and regression
+                        const n = x.length;
+                        const meanX = x.reduce((sum, val) => sum + val, 0) / n;
+                        const meanY = y.reduce((sum, val) => sum + val, 0) / n;
+                        
+                        let numerator = 0;
+                        let denominatorX = 0;
+                        let denominatorY = 0;
+                        
+                        for (let i = 0; i < n; i++) {
+                            numerator += (x[i] - meanX) * (y[i] - meanY);
+                            denominatorX += (x[i] - meanX) ** 2;
+                            denominatorY += (y[i] - meanY) ** 2;
+                        }
+                        
+                        const r = numerator / Math.sqrt(denominatorX * denominatorY);
+                        document.getElementById('datasetCorrelation').textContent = `Correlation: ${r.toFixed(4)}`;
+                        
+                        // Calculate regression
+                        const slope = numerator / denominatorX;
+                        const intercept = meanY - slope * meanX;
+                        
+                        const interceptSign = intercept >= 0 ? '+' : '';
+                        document.getElementById('datasetEquation').textContent = `Equation: y = ${slope.toFixed(2)}x ${interceptSign} ${intercept.toFixed(2)}`;
+                        
+                        // Simulate API call for plot
+                        simulateApiCall('linear_regression', {
+                            x: x,
+                            y: y
+                        }, 'datasetPlot');
+                    } else {
+                        alert('No valid data found in the CSV file. Please ensure it has at least two columns of numeric data.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        // Regression Comparison tab functionality
+        document.getElementById('polynomialDegree').addEventListener('input', () => {
+            const degree = document.getElementById('polynomialDegree').value;
+            document.getElementById('degreeValue').textContent = degree;
+        });
+        
+        document.getElementById('updateComparison').addEventListener('click', () => {
+            // Use housing dataset by default if no points are available
+            let x, y;
+            if (points.length >= 3) {
+                x = points.map(point => point.x);
+                y = points.map(point => point.y);
+            } else {
+                x = datasets.housing.x;
+                y = datasets.housing.y;
+            }
+            
+            const degree = parseInt(document.getElementById('polynomialDegree').value);
+            
+            // Simulate API call for comparison plot
+            simulateApiCall('compare_regressions', {
+                x: x,
+                y: y,
+                degree: degree
+            }, 'comparisonPlot', (data) => {
+                // Update metrics
+                document.getElementById('linearMSE').textContent = data.linear.mse.toFixed(4);
+                document.getElementById('linearR2').textContent = data.linear.r2.toFixed(4);
+                document.getElementById('polyMSE').textContent = data.polynomial.mse.toFixed(4);
+                document.getElementById('polyR2').textContent = data.polynomial.r2.toFixed(4);
+            });
+        });
+
+        // Prediction Simulator tab functionality
+        document.getElementById('predictButton').addEventListener('click', () => {
+            const xValue = parseFloat(document.getElementById('xValueInput').value);
+            
+            if (isNaN(xValue)) {
+                alert('Please enter a valid number for X value.');
+                return;
+            }
+            
+            // Use current regression line if available, otherwise calculate from points
+            let slope, intercept;
+            if (regressionLine) {
+                slope = regressionLine.slope;
+                intercept = regressionLine.intercept;
+            } else if (points.length >= 2) {
+                const result = calculateLinearRegression();
+                slope = result.slope;
+                intercept = result.intercept;
+            } else {
+                // Use housing dataset as fallback
+                const dataset = datasets.housing;
+                const n = dataset.x.length;
+                const meanX = dataset.x.reduce((sum, x) => sum + x, 0) / n;
+                const meanY = dataset.y.reduce((sum, y) => sum + y, 0) / n;
+                
+                let numerator = 0;
+                let denominator = 0;
+                
+                for (let i = 0; i < n; i++) {
+                    numerator += (dataset.x[i] - meanX) * (dataset.y[i] - meanY);
+                    denominator += (dataset.x[i] - meanX) ** 2;
+                }
+                
+                slope = numerator / denominator;
+                intercept = meanY - slope * meanX;
+            }
+            
+            // Calculate prediction
+            const prediction = slope * xValue + intercept;
+            
+            // Display result
+            const predictionResult = document.getElementById('predictionResult');
+            predictionResult.textContent = `Predicted Y value: ${prediction.toFixed(2)}`;
+            predictionResult.className = 'alert alert-success';
+            
+            // Simulate API call for prediction plot
+            const showConfidence = document.getElementById('showConfidence').checked;
+            
+            // In a real implementation, this would call the backend
+            // Here we're just simulating the plot update
+            setTimeout(() => {
+                const predictionPlot = document.getElementById('predictionPlot');
+                predictionPlot.src = 'https://via.placeholder.com/600x400?text=Prediction+Visualization';
+                predictionPlot.style.display = 'block';
+            }, 500);
+        });
+
+        // Function to simulate API calls (in a real implementation, this would call the Flask backend)
+        function simulateApiCall(endpoint, data, targetImageId, callback) {
+            // Show loading state
+            const targetImage = document.getElementById(targetImageId);
+            targetImage.src = 'https://via.placeholder.com/600x400?text=Loading...';
+            targetImage.style.display = 'block';
+            
+            // In a real implementation, this would be an actual API call
+            setTimeout(() => {
+                // Simulate response data
+                let responseData;
+                
+                switch (endpoint) {
+                    case 'linear_regression':
+                        responseData = {
+                            slope: 1.2,
+                            intercept: 0.5,
+                            mse: 0.25,
+                            r2: 0.85,
+                            plot: 'base64_encoded_image_data'
+                        };
+                        break;
+                    case 'polynomial_regression':
+                        responseData = {
+                            coefficients: [0.1, 1.5, 0.3],
+                            intercept: 0.2,
+                            mse: 0.15,
+                            r2: 0.92,
+                            plot: 'base64_encoded_image_data'
+                        };
+                        break;
+                    case 'compare_regressions':
+                        responseData = {
+                            plot: 'base64_encoded_image_data',
+                            linear: {
+                                slope: 1.2,
+                                intercept: 0.5,
+                                mse: 0.25,
+                                r2: 0.85
+                            },
+                            polynomial: {
+                                coefficients: [0.1, 1.5, 0.3],
+                                intercept: 0.2,
+                                mse: 0.15,
+                                r2: 0.92
+                            }
+                        };
+                        break;
+                    default:
+                        responseData = { plot: 'base64_encoded_image_data' };
+                }
+                
+                // Update image with placeholder (in a real implementation, this would use the actual plot data)
+                targetImage.src = 'https://via.placeholder.com/600x400?text=Regression+Visualization';
+                
+                // Call callback if provided
+                if (callback) callback(responseData);
+            }, 1000);
+        }
+
+        // Initialize with default data
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add some initial points to the playground
+            points = [
+                { x: 2, y: 3 },
+                { x: 4, y: 5 },
+                { x: 6, y: 7 },
+                { x: 8, y: 9 }
+            ];
+            calculateLinearRegression();
+            drawPlot();
+            updateMetrics();
+            
+            // Trigger housing dataset display
+            document.querySelector('[data-dataset="housing"]').click();
+            
+            // Trigger comparison update
+            document.getElementById('updateComparison').click();
+        });
+    </script>
+</body>
+</html>
